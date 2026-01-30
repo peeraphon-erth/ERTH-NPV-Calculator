@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERTH Financial Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        input[type=range] { accent-color: #10b981; }
+        input[type=number] { 
+            -moz-appearance: textfield; 
+            appearance: textfield;
+        }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        .metric-card { transition: all 0.3s ease; }
+        .metric-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans">
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <header class="mb-8 border-b border-slate-200 pb-6 flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">ERTH Financial Simulator</h1>
+                <p class="text-slate-500 mt-1">Interactive Execution Case & Valuation Modeling</p>
+            </div>
+            <div class="mt-4 md:mt-0 bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm">
+                <span class="text-xs font-semibold text-slate-400 uppercase block">Enterprise Value</span>
+                <span id="ev-header" class="text-xl font-bold text-emerald-600">$62.4M</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Sidebar: Controls -->
+            <aside class="lg:col-span-4 space-y-6">
+                <!-- Investment & Exit Controls -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        Valuation Levers
+                    </h2>
+                    <div class="space-y-5">
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <label class="text-sm font-medium text-slate-700">WACC (Discount Rate)</label>
+                                <span id="wacc-val" class="text-sm font-bold text-emerald-600">15%</span>
+                            </div>
+                            <input type="range" id="wacc-input" min="5" max="30" step="0.5" value="15" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <label class="text-sm font-medium text-slate-700">Terminal Multiple (EBITDA)</label>
+                                <span id="multiple-val" class="text-sm font-bold text-emerald-600">8.0x</span>
+                            </div>
+                            <input type="range" id="multiple-input" min="1" max="20" step="0.5" value="8" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <label class="text-sm font-medium text-slate-700">Entry Valuation ($k)</label>
+                                <span id="entry-val" class="text-sm font-bold text-emerald-600">$20,000</span>
+                            </div>
+                            <input type="range" id="entry-input" min="5000" max="50000" step="1000" value="20000" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Operating Controls -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        Operating Model
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                            <div class="flex flex-col">
+                                <label class="text-xs font-bold text-slate-500 uppercase">Gross Margin</label>
+                                <span class="text-[10px] text-slate-400">Blended rate (%)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="number" id="margin-input" value="75" class="w-16 bg-white border border-slate-200 rounded px-2 py-1 text-right font-bold text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <span class="ml-1 font-bold text-slate-400">%</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                            <div class="flex flex-col">
+                                <label class="text-xs font-bold text-slate-500 uppercase">Credit Price</label>
+                                <span class="text-[10px] text-slate-400">USD / tCO₂e</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="mr-1 font-bold text-slate-400">$</span>
+                                <input type="number" id="price-input" value="20" class="w-16 bg-white border border-slate-200 rounded px-2 py-1 text-right font-bold text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                            <div class="flex flex-col">
+                                <label class="text-xs font-bold text-slate-500 uppercase">OpCo Take Rate</label>
+                                <span class="text-[10px] text-slate-400">Share of GMV (%)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="number" id="take-rate-input" value="50" class="w-16 bg-white border border-slate-200 rounded px-2 py-1 text-right font-bold text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <span class="ml-1 font-bold text-slate-400">%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content: Outputs -->
+            <main class="lg:col-span-8 space-y-6">
+                <!-- Top Metrics -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="metric-card bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Project NPV</p>
+                        <p id="npv-display" class="text-2xl font-bold text-slate-800">$42.4M</p>
+                        <p class="text-[10px] text-slate-400 mt-1">Net of entry valuation</p>
+                    </div>
+                    <div class="metric-card bg-emerald-600 p-5 rounded-xl shadow-md">
+                        <p class="text-xs font-semibold text-emerald-100 uppercase tracking-wider">Internal Rate of Return</p>
+                        <p id="irr-display" class="text-2xl font-bold text-white">72.4%</p>
+                        <p class="text-[10px] text-emerald-200 mt-1">Annualized 5-year return</p>
+                    </div>
+                    <div class="metric-card bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Value Uplift</p>
+                        <p id="uplift-display" class="text-2xl font-bold text-slate-800">3.1x</p>
+                        <p class="text-[10px] text-slate-400 mt-1">Investment Multiple (MOIC)</p>
+                    </div>
+                </div>
+
+                <!-- Chart Area -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-semibold mb-4">EBITDA & Free Cash Flow Forecast</h3>
+                    <div class="h-64">
+                        <canvas id="cfChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Detailed Breakdown -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                        <h3 class="font-semibold text-slate-700">Y1 - Y5 Operating Detail</h3>
+                        <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold uppercase">USD '000s</span>
+                    </div>
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-white border-b border-slate-100">
+                            <tr>
+                                <th class="px-6 py-3 font-semibold text-slate-400 text-xs uppercase">Metric</th>
+                                <th class="px-6 py-3 font-semibold text-slate-800 text-right">Y1</th>
+                                <th class="px-6 py-3 font-semibold text-slate-800 text-right">Y2</th>
+                                <th class="px-6 py-3 font-semibold text-slate-800 text-right">Y3</th>
+                                <th class="px-6 py-3 font-semibold text-slate-800 text-right">Y4</th>
+                                <th class="px-6 py-3 font-semibold text-slate-800 text-right">Y5</th>
+                            </tr>
+                        </thead>
+                        <tbody id="operating-table-body" class="divide-y divide-slate-100">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Static baseline assumptions from model
+        const capacity = 1000000;
+        const coverageRamp = [0.10, 0.55, 0.80, 0.90, 1.00];
+        const partnerGrowth = [1.00, 1.15, 1.3225, 1.5209, 1.7490]; // 15% CAGR
+        const saasRevenue = [550, 688, 860, 1075, 1344];
+        const opex = [1600, 1920, 2304, 2488, 2687];
+
+        // UI Elements
+        const inputs = [
+            'wacc-input', 'multiple-input', 'entry-input',
+            'margin-input', 'price-input', 'take-rate-input'
+        ].map(id => document.getElementById(id));
+
+        const displays = {
+            wacc: document.getElementById('wacc-val'),
+            multiple: document.getElementById('multiple-val'),
+            entry: document.getElementById('entry-val'),
+            evHeader: document.getElementById('ev-header'),
+            npv: document.getElementById('npv-display'),
+            irr: document.getElementById('irr-display'),
+            uplift: document.getElementById('uplift-display'),
+            tableBody: document.getElementById('operating-table-body')
+        };
+
+        let chart;
+
+        function formatK(val) {
+            return new Intl.NumberFormat('en-US').format(Math.round(val));
+        }
+
+        function calculateIRR(cashFlows) {
+            let irr = 0.1; 
+            for (let i = 0; i < 100; i++) {
+                let npv = 0;
+                let dNpv = 0;
+                for (let j = 0; j < cashFlows.length; j++) {
+                    npv += cashFlows[j] / Math.pow(1 + irr, j);
+                    dNpv -= j * cashFlows[j] / Math.pow(1 + irr, j + 1);
+                }
+                let newIrr = irr - npv / dNpv;
+                if (Math.abs(newIrr - irr) < 0.00001) return newIrr;
+                irr = newIrr;
+            }
+            return irr;
+        }
+
+        function update() {
+            const wacc = parseFloat(inputs[0].value) / 100;
+            const multiple = parseFloat(inputs[1].value);
+            const entryVal = parseInt(inputs[2].value);
+            const margin = parseFloat(inputs[3].value) / 100;
+            const price = parseFloat(inputs[4].value);
+            const takeRate = parseFloat(inputs[5].value) / 100;
+
+            // Update Label Displays
+            displays.wacc.textContent = `${inputs[0].value}%`;
+            displays.multiple.textContent = `${multiple}x`;
+            displays.entry.textContent = `$${formatK(entryVal)}`;
+
+            // Recalculate Model
+            const creditRev = coverageRamp.map((cov, i) => (capacity * cov * partnerGrowth[i] / 1000) * price * takeRate);
+            const totalRev = creditRev.map((cr, i) => cr + saasRevenue[i]);
+            const grossProfit = totalRev.map(tr => tr * margin);
+            const ebitda = grossProfit.map((gp, i) => gp - opex[i]);
+
+            // DCF
+            let pvFcf = 0;
+            const discountedFlows = ebitda.map((fcf, i) => {
+                const pv = fcf / Math.pow(1 + wacc, i + 1);
+                pvFcf += pv;
+                return pv;
+            });
+
+            const terminalValue = ebitda[4] * multiple;
+            const pvTv = terminalValue / Math.pow(1 + wacc, 5);
+            const ev = pvFcf + pvTv;
+
+            // Returns
+            const irrFlows = [-entryVal, ...ebitda];
+            irrFlows[irrFlows.length - 1] += terminalValue;
+            const irr = calculateIRR(irrFlows);
+            const npv = ev - entryVal;
+            const uplift = ev / entryVal;
+
+            // Update Main UI
+            displays.evHeader.textContent = `$${(ev / 1000).toFixed(1)}M`;
+            displays.npv.textContent = `$${(npv / 1000).toFixed(1)}M`;
+            displays.irr.textContent = `${(irr * 100).toFixed(1)}%`;
+            displays.uplift.textContent = `${uplift.toFixed(2)}x`;
+
+            updateTable(totalRev, grossProfit, ebitda);
+            updateChart(ebitda, discountedFlows);
+        }
+
+        function updateTable(rev, gp, eb) {
+            const rows = [
+                { label: 'Credit Revenue', data: rev.map((r, i) => r - saasRevenue[i]) },
+                { label: 'SaaS Revenue', data: saasRevenue },
+                { label: 'Total Revenue', data: rev, bold: true },
+                { label: 'Gross Profit', data: gp },
+                { label: 'EBITDA / FCF', data: eb, bold: true, color: 'text-emerald-600' }
+            ];
+
+            displays.tableBody.innerHTML = rows.map(row => `
+                <tr class="${row.bold ? 'bg-slate-50/50 font-bold' : ''}">
+                    <td class="px-6 py-3 text-slate-600">${row.label}</td>
+                    ${row.data.map(v => `<td class="px-6 py-3 text-right ${row.color || 'text-slate-700'}">${formatK(v)}</td>`).join('')}
+                </tr>
+            `).join('');
+        }
+
+        function updateChart(ebitda, pv) {
+            const ctx = document.getElementById('cfChart').getContext('2d');
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
+                    datasets: [
+                        { label: 'EBITDA ($k)', data: ebitda, backgroundColor: '#cbd5e1', borderRadius: 4 },
+                        { label: 'Present Value ($k)', data: pv, backgroundColor: '#10b981', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
+                    scales: { 
+                        y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        inputs.forEach(input => input.addEventListener('input', update));
+        window.onload = update;
+    </script>
+</body>
+</html>
